@@ -1,10 +1,12 @@
 import cv2 as cv
 from utils.face_recognition import detect_face
+from utils.motion_tracking import track_hand
 
 
 class MotionTracking:
     def process_frame(self, frame):
         # Your implementation comes here:
+        frame = track_hand(frame)
         faces = detect_face(frame)
         for x, y, w, h in faces:
             center = (x + w // 2, y + h // 2)
