@@ -2,6 +2,7 @@ from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 import numpy as np
 import cv2 as cv
+import os
 
 MARGIN = 10  # pixels
 FONT_SIZE = 1
@@ -10,6 +11,8 @@ HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
+    if os.environ["DEBUG"] == "0":
+        return rgb_image
     hand_landmarks_list = detection_result.hand_landmarks
     handedness_list = detection_result.handedness
     annotated_image = np.copy(rgb_image)
