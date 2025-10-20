@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 import mediapipe as mp
 from mediapipe.framework.formats import landmark_pb2
 import cv2 as cv
+import os
 
 plt.rcParams.update(
     {
@@ -36,6 +37,9 @@ def draw_gesture_on_image(image, results):
     Returns:
         Annotated image with hand landmarks and gesture labels
     """
+    if os.environ.get("DEBUG", "0") == "0":
+        return image
+
     annotated_image = image.copy()
 
     # Check if any gestures were detected
