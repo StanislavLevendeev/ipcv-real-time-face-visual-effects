@@ -10,7 +10,7 @@ task_manager = TaskManager(tasks)
 
 cam = cv.VideoCapture(0)
 
-while True:
+while cam.isOpened():
     ret, frame = cam.read()
     if not ret:
         break
