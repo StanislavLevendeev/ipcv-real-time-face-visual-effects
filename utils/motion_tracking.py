@@ -10,24 +10,9 @@ import os
 last_gesture_result = None
 lock = threading.Lock()
 
-hand_marker_path = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__), "..", "data", "hand_landmarker.task"
-    )
-)
-
 gesture_recognizer_path = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__), "..", "data", "gesture_recognizer.task"
-    )
+    os.path.join(os.path.dirname(__file__), "..", "data", "gesture_recognizer.task")
 )
-
-base_hand_options = python.BaseOptions(model_asset_path=hand_marker_path)
-hand_options = vision.HandLandmarkerOptions(base_options=base_hand_options, num_hands=2)
-hand_detector = vision.HandLandmarker.create_from_options(hand_options)
-
-DESIRED_HEIGHT = 480
-DESIRED_WIDTH = 480
 
 timestamp = 0
 
@@ -46,16 +31,6 @@ options_gesture = vision.GestureRecognizerOptions(
     result_callback=print_result,
 )
 recognizer_gesture = vision.GestureRecognizer.create_from_options(options_gesture)
-
-
-def track_hand(frame):
-    # STEP 4: Detect hand landmarks from the input image.
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-    detection_result = hand_detector.detect(image)
-
-    # STEP 5: Process the classification result. In this case, visualize it.
-    annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
-    return annotated_image
 
 
 def track_gesture(frame):
