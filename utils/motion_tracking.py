@@ -1,7 +1,6 @@
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from utils.display.hand_display import draw_landmarks_on_image
 from utils.display.gesture_display import draw_gesture_on_image
 import threading
 import os
