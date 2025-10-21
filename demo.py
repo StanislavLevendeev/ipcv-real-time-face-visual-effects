@@ -15,6 +15,8 @@ while cam.isOpened():
     if not ret:
         break
 
+    frame = cv.flip(frame, 1)
+
     key = cv.waitKey(1)
     # Process frame with selected task
     processed_frame = task_manager.process_frame(frame, key)
