@@ -1,5 +1,4 @@
 import cv2 as cv
-from utils.face_recognition import detect_face
 from utils.motion_tracking import track_gesture, is_wanted_gesture
 import os
 from utils.overlay_png import overlay_png
