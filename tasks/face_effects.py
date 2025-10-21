@@ -1,6 +1,6 @@
 import cv2 as cv
-import numpy as np
 import os
+from utils.overlay_png import overlay_png
 
 
 class FaceEffects:
@@ -25,33 +25,6 @@ class FaceEffects:
         
         if os.path.exists(teeth_path):
             self._teeth = cv.imread(teeth_path, cv.IMREAD_UNCHANGED)
-    
-    def _overlay_png(self, frame, overlay, x, y, w, h):
-        """Overlay a PNG image with alpha channel onto frame"""
-        if overlay is None:
-            return frame
-        
-        # Resize overlay to fit the target area
-        overlay_resized = cv.resize(overlay, (w, h))
-        
-        # Ensure we don't go out of bounds
-        if y < 0 or x < 0 or y + h > frame.shape[0] or x + w > frame.shape[1]:
-            return frame
-        
-        # Extract alpha channel if it exists
-        if overlay_resized.shape[2] == 4:
-            alpha = overlay_resized[:, :, 3] / 255.0
-            overlay_rgb = overlay_resized[:, :, :3]
-        else:
-            alpha = np.ones((h, w))
-            overlay_rgb = overlay_resized
-        
-        # Blend the overlay with the frame
-        for c in range(3):
-            frame[y:y+h, x:x+w, c] = (alpha * overlay_rgb[:, :, c] + 
-                                       (1 - alpha) * frame[y:y+h, x:x+w, c])
-        
-        return frame
     
     def process_frame(self, frame):
         # Your implementation comes here:
@@ -128,14 +101,14 @@ class FaceEffects:
             glasses_w = int(1.1 * w)
             glasses_h = int(0.4 * h)
             glasses_x = x - int(0.05 * w)
-            frame = self._overlay_png(frame, self._glasses, glasses_x, glasses_y, glasses_w, glasses_h)
+            frame = overlay_png(frame, self._glasses, glasses_x, glasses_y, glasses_w, glasses_h)
             
             # Apply bunny teeth - positioned so top aligns with mouth and extends downward
             teeth_x = x + int(0.35 * w)
             teeth_y = y + int(0.72 * h)  # Start slightly above mouth level
             teeth_w = int(0.30 * w)
             teeth_h = int(0.25 * h)  # Extend downward from mouth
-            frame = self._overlay_png(frame, self._teeth, teeth_x, teeth_y, teeth_w, teeth_h)
+            frame = overlay_png(frame, self._teeth, teeth_x, teeth_y, teeth_w, teeth_h)
         return frame
 
     def display_label(self, frame):
