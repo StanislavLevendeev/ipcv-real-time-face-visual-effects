@@ -12,6 +12,7 @@ class FaceEffects:
         # Smoothing for jitter reduction
         self._smoothed_faces = []
         self._smoothing_factor = 0.7  # Higher = smoother but more lag
+        self.last_detected_faces = []
         
     def _load_assets(self):
         """Load PNG assets with alpha channel"""
@@ -46,6 +47,8 @@ class FaceEffects:
             # Find the largest face by area
             largest_face = max(faces, key=lambda face: face[2] * face[3])
             faces = [largest_face]
+            
+        self.last_detected_faces = faces
         
         # Apply temporal smoothing to reduce jitter
         if len(faces) > 0 and len(self._smoothed_faces) > 0:
