@@ -2,8 +2,10 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from utils.display.gesture_display import draw_gesture_on_image
+import cv2 as cv
 import threading
 import os
+import time
 
 # A global variable to store last result safely
 last_gesture_result = None
@@ -13,7 +15,7 @@ gesture_recognizer_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "data", "gesture_recognizer.task")
 )
 
-timestamp = 0
+timestamp = int(time.time() * 1000)
 
 
 def print_result(result, output_image, timestamp_ms):
@@ -34,10 +36,11 @@ recognizer_gesture = vision.GestureRecognizer.create_from_options(options_gestur
 
 def track_gesture(frame):
     global timestamp
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
     image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
     recognizer_gesture.recognize_async(image, timestamp)
 
-    timestamp += 33  # approximate 30 FPS
+    timestamp = int(time.time() * 1000)
 
     gestures = []
     with lock:
@@ -46,6 +49,8 @@ def track_gesture(frame):
             for hands in last_gesture_result.gestures:
                 gestures.append(hands[0].category_name)
             frame = draw_gesture_on_image(frame, last_gesture_result)
+            
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
     return frame, last_gesture_result
 
 
