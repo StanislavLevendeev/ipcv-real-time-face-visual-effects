@@ -22,7 +22,7 @@ class TaskManager:
                 if 0 <= idx < len(self.tasks):
                     self.current_task_idx = idx
             elif key_str.lower() == "d":
-                current_debug = os.environ.get("DEBUG", "0")
+                current_debug = os.getenv("DEBUG", "0")
                 os.environ["DEBUG"] = "0" if current_debug == "1" else "1"
                 print(f"Debug mode: {'ON' if os.environ['DEBUG'] == '1' else 'OFF'}")
         frame = self.tasks[self.current_task_idx].display_label(frame)

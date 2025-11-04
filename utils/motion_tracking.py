@@ -7,9 +7,11 @@ import threading
 import os
 import time
 
-# A global variable to store last result safely
 last_gesture_result = None
+
 lock = threading.Lock()
+frame_counter = 0
+gesture_interval = int(os.getenv("FRAMES_DELAY", "1"))
 
 gesture_recognizer_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "data", "gesture_recognizer.task")
@@ -35,23 +37,34 @@ recognizer_gesture = vision.GestureRecognizer.create_from_options(options_gestur
 
 
 def track_gesture(frame):
-    global timestamp
-    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-    recognizer_gesture.recognize_async(image, timestamp)
+    """
+    Run gesture recognition on every Nth frame (set via `gesture_interval`).
+    Returns (frame, last_result).
+    """
+    global frame_counter, timestamp, last_gesture_result
 
-    timestamp = int(time.time() * 1000)
+    frame_counter += 1
 
-    gestures = []
+    # Convert color for MediaPipe input
+    rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+    # Only recognize on every Nth frame
+    if frame_counter % gesture_interval == 0:
+        timestamp = int(time.time() * 1000)
+        recognizer_gesture.recognize_async(mp_image, timestamp)
+
+    # Copy the latest available result safely
     with lock:
-        if last_gesture_result:
-            gestures = []
-            for hands in last_gesture_result.gestures:
-                gestures.append(hands[0].category_name)
-            frame = draw_gesture_on_image(frame, last_gesture_result)
-            
-    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    return frame, last_gesture_result
+        result_copy = last_gesture_result
+
+    # Optional: draw landmarks/gestures
+    if result_copy:
+        rgb_frame = draw_gesture_on_image(rgb_frame, result_copy)
+
+    # Convert back to BGR for OpenCV display
+    bgr_frame = cv.cvtColor(rgb_frame, cv.COLOR_RGB2BGR)
+    return bgr_frame, result_copy
 
 
 def is_wanted_gesture(result, category):
