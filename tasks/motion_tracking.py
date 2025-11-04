@@ -12,43 +12,52 @@ class MotionTracking:
         icon_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "data", "light_bulb.png")
         )
-        self.icon_rgba = cv.imread(
-            icon_path, cv.IMREAD_UNCHANGED
-        )  # Expect RGBA (with alpha)
+        # Load an RGBA icon (preserve alpha channel for overlay)
+        self.icon_rgba = cv.imread(icon_path, cv.IMREAD_UNCHANGED)
+        # Expect RGBA (with alpha) so overlay preserves transparency
         if self.icon_rgba is None:
             print(f"Warning: Light bulb PNG not found at {icon_path}")
         self.face_effect = FaceEffects()
 
     def process_frame(self, frame):
-        # Your implementation comes here:
+        # Run gesture tracking (may be throttled internally) and get last result
         frame, result = track_gesture(frame)
+        # Check whether any detected gesture matches the target category
         pointing_up = is_wanted_gesture(result, "Pointing_Up")
 
+        # If the desired gesture isn't present, nothing to do — return frame
         if not pointing_up:
             return frame
 
+        # Run face effects pipeline to get up-to-date face landmarks
         frame_copy = self.face_effect.process_frame(frame)
+        # Container with latest detected faces & landmarks
         faces = self.face_effect.last_detected_faces
         img_h, img_w = frame_copy.shape[:2]
         for face_landmarks in faces.multi_face_landmarks:
             if pointing_up and self.icon_rgba is not None:
-                # collect normalized coordinates
+                # Collect normalized landmark coordinates (0..1)
                 xs = [lm.x for lm in face_landmarks.landmark]
                 ys = [lm.y for lm in face_landmarks.landmark]
 
+                # Convert normalized coords to pixel indices, clamped to image
                 x_min = int(max(0, min(xs) * img_w))
                 x_max = int(min(img_w, max(xs) * img_w))
                 y_min = int(max(0, min(ys) * img_h))
                 y_max = int(min(img_h, max(ys) * img_h))
 
+                # Bounding box for the face in pixels
                 w_box = x_max - x_min
                 h_box = y_max - y_min
+                # Skip degenerate boxes
                 if w_box <= 0 or h_box <= 0:
                     continue
+                # Place the icon above the detected face box
                 frame_copy = self.display_light_bulb(
                     frame_copy, x_min, y_min, w_box, h_box
                 )
 
+            # Optional debug overlay controlled by DEBUG env var
             if os.getenv("DEBUG", "0") == "1":
                 frame_copy = self.face_effect.display_debug_info(frame)
 
@@ -56,7 +65,9 @@ class MotionTracking:
 
     def display_light_bulb(self, frame, x, y, w, h):
         # Scale icon relative to face width
+        # Target width is a proportion of detected face width
         target_w = int(w * 0.5)
+        # Compute uniform scale and preserve aspect ratio
         scale = target_w / self.icon_rgba.shape[1]
         target_h = max(1, int(self.icon_rgba.shape[0] * scale))
         icon_resized = cv.resize(
@@ -66,6 +77,7 @@ class MotionTracking:
         icon_x = x + w // 2 - target_w // 2
         icon_y = y - target_h - self.MARGIN
 
+        # Composite RGBA icon onto BGR frame at computed position
         frame = overlay_png(frame, icon_resized, icon_x, icon_y)
         return frame
 
