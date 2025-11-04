@@ -194,11 +194,18 @@ class FaceEffects:
                     # draw ellipse and center marker plus label
                     center = (x_min + w_box // 2, y_min + h_box // 2)
                     frame = cv.ellipse(
-                        frame, center, (w_box // 2, h_box // 2), 0, 0, 360, (255, 0, 255), 2
+                        frame,
+                        center,
+                        (w_box // 2, h_box // 2),
+                        0,
+                        0,
+                        360,
+                        (255, 0, 255),
+                        2,
                     )
                     cv.circle(frame, center, 4, (0, 255, 0), -1)
         return frame
-    
+
     def _apply_freckles(self, frame, left_cheek_points, right_cheek_points, nose_sides):
         """Apply freckles based on precise cheek landmarks with natural randomness."""
         freckle_color = (40, 100, 150)

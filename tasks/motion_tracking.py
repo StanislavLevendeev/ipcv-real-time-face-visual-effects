@@ -29,45 +29,28 @@ class MotionTracking:
 
         frame_copy = self.face_effect.process_frame(frame)
         faces = self.face_effect.last_detected_faces
-
-        # faces is a MediaPipe FaceMesh result object (from face_mesh.process(rgb))
-        # convert detected face landmarks to bounding boxes (x,y,w,h) in pixels
-        if faces is None or not getattr(faces, "multi_face_landmarks", None):
-            return frame_copy
-
         img_h, img_w = frame_copy.shape[:2]
         for face_landmarks in faces.multi_face_landmarks:
-            # collect normalized coordinates
-            xs = [lm.x for lm in face_landmarks.landmark]
-            ys = [lm.y for lm in face_landmarks.landmark]
-
-            x_min = int(max(0, min(xs) * img_w))
-            x_max = int(min(img_w, max(xs) * img_w))
-            y_min = int(max(0, min(ys) * img_h))
-            y_max = int(min(img_h, max(ys) * img_h))
-
-            w_box = x_max - x_min
-            h_box = y_max - y_min
-            if w_box <= 0 or h_box <= 0:
-                continue
-
-            if os.getenv("DEBUG", "0") == "1":
-                center = (x_min + w_box // 2, y_min + h_box // 2)
-                frame_copy = cv.ellipse(
-                    frame_copy,
-                    center,
-                    (w_box // 2, h_box // 2),
-                    0,
-                    0,
-                    360,
-                    (255, 0, 255),
-                    4,
-                )
-
             if pointing_up and self.icon_rgba is not None:
+                # collect normalized coordinates
+                xs = [lm.x for lm in face_landmarks.landmark]
+                ys = [lm.y for lm in face_landmarks.landmark]
+
+                x_min = int(max(0, min(xs) * img_w))
+                x_max = int(min(img_w, max(xs) * img_w))
+                y_min = int(max(0, min(ys) * img_h))
+                y_max = int(min(img_h, max(ys) * img_h))
+
+                w_box = x_max - x_min
+                h_box = y_max - y_min
+                if w_box <= 0 or h_box <= 0:
+                    continue
                 frame_copy = self.display_light_bulb(
                     frame_copy, x_min, y_min, w_box, h_box
                 )
+
+            if os.getenv("DEBUG", "0") == "1":
+                frame_copy = self.face_effect.display_debug_info(frame)
 
         return frame_copy
 

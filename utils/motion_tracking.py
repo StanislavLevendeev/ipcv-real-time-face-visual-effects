@@ -66,6 +66,7 @@ def track_gesture(frame):
     bgr_frame = cv.cvtColor(rgb_frame, cv.COLOR_RGB2BGR)
     return bgr_frame, result_copy
 
+
 def is_wanted_gesture(result, category):
     if result is None:
         return False
