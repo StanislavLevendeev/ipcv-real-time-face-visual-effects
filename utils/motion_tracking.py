@@ -36,22 +36,28 @@ recognizer_gesture = vision.GestureRecognizer.create_from_options(options_gestur
 
 def track_gesture(frame):
     global timestamp
-    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-    recognizer_gesture.recognize_async(image, timestamp)
 
+    # Update timestamp first
     timestamp = int(time.time() * 1000)
 
-    gestures = []
+    # Convert to RGB for MediaPipe
+    rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+    # Run async recognition
+    recognizer_gesture.recognize_async(image, timestamp)
+
+    # Safely copy latest result
     with lock:
-        if last_gesture_result:
-            gestures = []
-            for hands in last_gesture_result.gestures:
-                gestures.append(hands[0].category_name)
-            frame = draw_gesture_on_image(frame, last_gesture_result)
-            
-    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    return frame, last_gesture_result
+        result_copy = last_gesture_result
+
+    if result_copy:
+        rgb_frame = draw_gesture_on_image(rgb_frame, result_copy)
+
+    # Convert back to BGR for OpenCV display
+    bgr_frame = cv.cvtColor(rgb_frame, cv.COLOR_RGB2BGR)
+    return bgr_frame, result_copy
+
 
 
 def is_wanted_gesture(result, category):
