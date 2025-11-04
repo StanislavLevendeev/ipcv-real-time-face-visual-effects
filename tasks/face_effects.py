@@ -1,6 +1,6 @@
 import cv2 as cv
-import numpy as np
 import os
+from utils.overlay_png import overlay_png
 import mediapipe as mp
 
 
@@ -44,6 +44,7 @@ class FaceEffects:
         # Smoothing for jitter reduction
         self._smoothed_landmarks = None
         self._smoothing_factor = 0.6  # Higher = smoother but more lag
+        self.last_detected_faces = []
         self._mesh_input_max_dim = 480  # Downscale face mesh input for speed
         self._mesh_every_n_frames = 2  # Run MediaPipe every N frames
         self._frame_counter = 0

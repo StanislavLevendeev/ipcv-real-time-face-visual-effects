@@ -10,10 +10,12 @@ task_manager = TaskManager(tasks)
 
 cam = cv.VideoCapture(0)
 
-while True:
+while cam.isOpened():
     ret, frame = cam.read()
     if not ret:
         break
+
+    frame = cv.flip(frame, 1)
 
     key = cv.waitKey(1)
     # Process frame with selected task
