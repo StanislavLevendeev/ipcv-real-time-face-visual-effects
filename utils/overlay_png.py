@@ -53,8 +53,14 @@ def overlay_png(frame, overlay_rgba, x, y, w=None, h=None, cache_key=None):
 
     if cached_rgb is None or cached_alpha is None:
         # choose interpolation depending on scaling
-        interp = cv.INTER_AREA if (target_w < base_w or target_h < base_h) else cv.INTER_LINEAR
-        overlay_resized = cv.resize(overlay_rgba, (target_w, target_h), interpolation=interp)
+        interp = (
+            cv.INTER_AREA
+            if (target_w < base_w or target_h < base_h)
+            else cv.INTER_LINEAR
+        )
+        overlay_resized = cv.resize(
+            overlay_rgba, (target_w, target_h), interpolation=interp
+        )
 
         # extract alpha and rgb, convert to float32
         if overlay_resized.shape[2] == 4:
@@ -66,7 +72,9 @@ def overlay_png(frame, overlay_rgba, x, y, w=None, h=None, cache_key=None):
 
         if cache_key is not None:
             # ensure dictionary entry exists and store precomputed arrays
-            overlay_cache.setdefault(cache_key, {"size": None, "rgb": None, "alpha": None})
+            overlay_cache.setdefault(
+                cache_key, {"size": None, "rgb": None, "alpha": None}
+            )
             overlay_cache[cache_key]["size"] = (target_w, target_h)
             overlay_cache[cache_key]["rgb"] = overlay_rgb
             overlay_cache[cache_key]["alpha"] = alpha

@@ -25,8 +25,10 @@ class FaceEffects:
         self._teeth = None
         self._plaster = None
         self._asset_downscale = 0.33
-        
-        self._overlay_quantization = 4  # Round resize targets to multiples of this for cache hits
+
+        self._overlay_quantization = (
+            4  # Round resize targets to multiples of this for cache hits
+        )
         self._load_assets()
 
         # Initialize MediaPipe Face Mesh
@@ -56,13 +58,19 @@ class FaceEffects:
         plaster_path = os.path.join(assets_dir, "plaster.png")
 
         if os.path.exists(glasses_path):
-            self._glasses = self._downscale_asset(cv.imread(glasses_path, cv.IMREAD_UNCHANGED))
+            self._glasses = self._downscale_asset(
+                cv.imread(glasses_path, cv.IMREAD_UNCHANGED)
+            )
 
         if os.path.exists(teeth_path):
-            self._teeth = self._downscale_asset(cv.imread(teeth_path, cv.IMREAD_UNCHANGED))
+            self._teeth = self._downscale_asset(
+                cv.imread(teeth_path, cv.IMREAD_UNCHANGED)
+            )
 
         if os.path.exists(plaster_path):
-            self._plaster = self._downscale_asset(cv.imread(plaster_path, cv.IMREAD_UNCHANGED))
+            self._plaster = self._downscale_asset(
+                cv.imread(plaster_path, cv.IMREAD_UNCHANGED)
+            )
 
     def _downscale_asset(self, asset):
         """Downscale asset to reduce per-frame resize cost."""
@@ -93,14 +101,19 @@ class FaceEffects:
         frame = cv.cvtColor(hsv.astype(np.uint8), cv.COLOR_HSV2BGR)
 
         self._frame_counter += 1
-        needs_mesh = self._cached_landmarks is None or self._frame_counter >= self._mesh_every_n_frames
+        needs_mesh = (
+            self._cached_landmarks is None
+            or self._frame_counter >= self._mesh_every_n_frames
+        )
         points_float = None
 
         if needs_mesh:
             max_dim = max(h, w)
             if max_dim > self._mesh_input_max_dim:
                 scale = self._mesh_input_max_dim / max_dim
-                mesh_frame = cv.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv.INTER_AREA)
+                mesh_frame = cv.resize(
+                    frame, (int(w * scale), int(h * scale)), interpolation=cv.INTER_AREA
+                )
             else:
                 mesh_frame = frame
             rgb = cv.cvtColor(mesh_frame, cv.COLOR_BGR2RGB)
@@ -109,12 +122,16 @@ class FaceEffects:
             self._frame_counter = 0
             if result and result.multi_face_landmarks:
                 landmarks = result.multi_face_landmarks[0].landmark
-                detected = np.array([[p.x * w, p.y * h] for p in landmarks], dtype=np.float32)
+                detected = np.array(
+                    [[p.x * w, p.y * h] for p in landmarks], dtype=np.float32
+                )
                 if self._smoothed_landmarks is None:
                     self._smoothed_landmarks = detected
                 else:
                     alpha = self._smoothing_factor
-                    self._smoothed_landmarks = alpha * self._smoothed_landmarks + (1 - alpha) * detected
+                    self._smoothed_landmarks = (
+                        alpha * self._smoothed_landmarks + (1 - alpha) * detected
+                    )
                 self._cached_landmarks = self._smoothed_landmarks.copy()
                 points_float = self._cached_landmarks
             else:
@@ -142,8 +159,12 @@ class FaceEffects:
         eye_distance = max(np.linalg.norm(right_eye_center - left_eye_center), 1.0)
         face_width = eye_distance * 2.8
 
-        frame = self._apply_freckles(frame, left_cheek_points, right_cheek_points, nose_sides)
-        frame = self._apply_glasses(frame, left_eye_center, right_eye_center, eye_distance)
+        frame = self._apply_freckles(
+            frame, left_cheek_points, right_cheek_points, nose_sides
+        )
+        frame = self._apply_glasses(
+            frame, left_eye_center, right_eye_center, eye_distance
+        )
         frame = self._apply_plaster(frame, nose_bridge, eye_distance)
         frame = self._apply_teeth(frame, mouth_top, face_width)
 
@@ -164,7 +185,9 @@ class FaceEffects:
                     offset_x = np.random.randint(*offsets_range)
                     offset_y = np.random.randint(*offsets_range)
                     radius = np.random.choice([2, 3], p=[0.5, 0.5])
-                    freckle_positions.append((point[0] + offset_x, point[1] + offset_y, radius))
+                    freckle_positions.append(
+                        (point[0] + offset_x, point[1] + offset_y, radius)
+                    )
 
         scatter_freckles(left_cheek_points, (-15, 15))
         scatter_freckles(right_cheek_points, (-15, 15))
@@ -174,13 +197,15 @@ class FaceEffects:
                 if np.random.random() > 0.5:
                     offset_x = np.random.randint(-5, 5)
                     offset_y = np.random.randint(-5, 5)
-                    freckle_positions.append((point[0] + offset_x, point[1] + offset_y, 2))
+                    freckle_positions.append(
+                        (point[0] + offset_x, point[1] + offset_y, 2)
+                    )
 
         np.random.seed(None)
 
         if frame is not None:
             h, w = frame.shape[:2]
-            for (fx, fy, radius) in freckle_positions:
+            for fx, fy, radius in freckle_positions:
                 x = int(fx)
                 y = int(fy)
                 if x < 0 or y < 0 or x >= w or y >= h:
@@ -209,7 +234,13 @@ class FaceEffects:
         plaster_y = nose_bridge[1] - plaster_h // 2
 
         return overlay_png(
-            frame, self._plaster, plaster_x, plaster_y, plaster_w, plaster_h, cache_key="plaster"
+            frame,
+            self._plaster,
+            plaster_x,
+            plaster_y,
+            plaster_w,
+            plaster_h,
+            cache_key="plaster",
         )
 
     def _apply_glasses(self, frame, left_eye_center, right_eye_center, eye_distance):
@@ -222,7 +253,13 @@ class FaceEffects:
         glasses_y = eyes_center[1] - int(glasses_h * 0.45)
 
         return overlay_png(
-            frame, self._glasses, glasses_x, glasses_y, glasses_w, glasses_h, cache_key="glasses"
+            frame,
+            self._glasses,
+            glasses_x,
+            glasses_y,
+            glasses_w,
+            glasses_h,
+            cache_key="glasses",
         )
 
     def _apply_teeth(self, frame, mouth_top, face_width):

@@ -5,6 +5,7 @@ from utils.motion_tracking import track_gesture, is_wanted_gesture
 from tasks.face_effects import FaceEffects
 from tasks.face_warping import FaceWarping
 
+
 class CombinedTask:
     """
     Routes frames to FaceEffects when "Pointing_Up" is detected (nerd effect)
@@ -92,11 +93,7 @@ class CombinedTask:
             has_love = is_wanted_gesture(gesture_result, "ILoveYou")
             has_point_up = is_wanted_gesture(gesture_result, "Pointing_Up")
 
-        new_mode = (
-            "chad" if has_love
-            else "nerd" if has_point_up
-            else "none"
-        )
+        new_mode = "chad" if has_love else "nerd" if has_point_up else "none"
 
         # Skip redundant processing if mode unchanged
         if new_mode == self.current_mode or new_mode == "none":
@@ -138,11 +135,7 @@ class CombinedTask:
         return frame_tracked
 
     def display_label(self, frame):
-        label_map = {
-            "chad": "Chad Jaw",
-            "nerd": "Nerd Effects",
-            "none": "None"
-        }
+        label_map = {"chad": "Chad Jaw", "nerd": "Nerd Effects", "none": "None"}
         cv.putText(
             frame,
             f"{label_map[self.current_mode]}",

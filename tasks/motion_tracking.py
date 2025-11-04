@@ -54,11 +54,20 @@ class MotionTracking:
             if os.environ.get("DEBUG", "0") == "1":
                 center = (x_min + w_box // 2, y_min + h_box // 2)
                 frame_copy = cv.ellipse(
-                    frame_copy, center, (w_box // 2, h_box // 2), 0, 0, 360, (255, 0, 255), 4
+                    frame_copy,
+                    center,
+                    (w_box // 2, h_box // 2),
+                    0,
+                    0,
+                    360,
+                    (255, 0, 255),
+                    4,
                 )
 
             if pointing_up and self.icon_rgba is not None:
-                frame_copy = self.display_light_bulb(frame_copy, x_min, y_min, w_box, h_box)
+                frame_copy = self.display_light_bulb(
+                    frame_copy, x_min, y_min, w_box, h_box
+                )
 
         return frame_copy
 

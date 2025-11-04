@@ -59,7 +59,6 @@ def track_gesture(frame):
     return bgr_frame, result_copy
 
 
-
 def is_wanted_gesture(result, category):
     if result is None:
         return False
