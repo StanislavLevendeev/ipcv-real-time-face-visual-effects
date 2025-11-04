@@ -59,7 +59,7 @@ python -m pip install -r requirements.txt
 ```powershell
 python demo.py
 ```
-3. Navigate through different effects using keyboard inputs `1-9`
+3. Navigate through different effects using keyboard inputs `1-4`
 
 4. Press `d` to toggle debug mode on/off
 
@@ -69,5 +69,4 @@ python demo.py
 Notes
 
 - Some modules depend on camera access and pre-trained models in `data/` — ensure those files are present.
-- If you add or move modules, update this section so new collaborators can find things quickly.
 
