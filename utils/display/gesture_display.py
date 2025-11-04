@@ -37,7 +37,7 @@ def draw_gesture_on_image(image, results):
     Returns:
         Annotated image with hand landmarks and gesture labels
     """
-    if os.environ.get("DEBUG", "0") == "0":
+    if os.getenv("DEBUG", "0") == "0":
         return image
 
     annotated_image = image.copy()

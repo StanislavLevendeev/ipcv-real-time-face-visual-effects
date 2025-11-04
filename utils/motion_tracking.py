@@ -11,7 +11,7 @@ import time
 last_gesture_result = None
 lock = threading.Lock()
 frame_counter = 0
-gesture_interval = os.environ.get("FRAMES_DELAY", "1")
+gesture_interval = int(os.getenv("FRAMES_DELAY", "1"))
 
 gesture_recognizer_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "data", "gesture_recognizer.task")

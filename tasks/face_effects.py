@@ -174,7 +174,7 @@ class FaceEffects:
 
     def display_debug_info(self, frame):
         h, w, _ = frame.shape
-        if os.environ.get("DEBUG", "0") == "1":
+        if os.getenv("DEBUG", "0") == "1":
             result = self.last_detected_faces
             if result and getattr(result, "multi_face_landmarks", None):
                 for face_landmarks in result.multi_face_landmarks:

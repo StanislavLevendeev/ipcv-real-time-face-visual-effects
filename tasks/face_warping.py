@@ -143,7 +143,7 @@ class FaceWarping:
         # Calculate face width for proportional scaling
         face_width = np.max(jaw_pts[:, 0]) - np.min(jaw_pts[:, 0])
 
-        if os.environ.get("DEBUG", "0") == "1":
+        if os.getenv("DEBUG", "0") == "1":
             frame = self._draw_debug_info(frame, jaw_pts, lower_jaw_pts, chin_pt)
 
         frame = self._apply_jaw_warp(frame, lower_jaw_pts, chin_pt, face_width)
@@ -474,7 +474,7 @@ class FaceWarping:
         """Display current mode label on frame."""
 
         # Determine label text based on mode
-        mode = "DEBUG MODE" if os.environ.get("DEBUG", "0") == "1" else "WARP MODE"
+        mode = "DEBUG MODE" if os.getenv("DEBUG", "0") == "1" else "WARP MODE"
         cv.putText(
             frame,
             f"Chad Jaw Filter - {mode}",
@@ -487,7 +487,7 @@ class FaceWarping:
         )
 
         # In debug mode, add a legend explaining color coding
-        if os.environ.get("DEBUG", "0") == "1":
+        if os.getenv("DEBUG", "0") == "1":
             cv.putText(
                 frame,
                 "Blue: Original | Red: Target | Yellow: Vectors",

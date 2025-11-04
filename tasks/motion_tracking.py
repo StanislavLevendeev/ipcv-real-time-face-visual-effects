@@ -51,7 +51,7 @@ class MotionTracking:
             if w_box <= 0 or h_box <= 0:
                 continue
 
-            if os.environ.get("DEBUG", "0") == "1":
+            if os.getenv("DEBUG", "0") == "1":
                 center = (x_min + w_box // 2, y_min + h_box // 2)
                 frame_copy = cv.ellipse(
                     frame_copy,

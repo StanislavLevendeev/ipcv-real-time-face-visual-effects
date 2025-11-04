@@ -4,11 +4,15 @@ from tasks.face_warping import FaceWarping
 from tasks.motion_tracking import MotionTracking
 from tasks.combined_task import CombinedTask
 from tasks.task_manager import TaskManager
-
-
+from dotenv import load_dotenv
+import os
+from pathlib import Path
+dotenv_path = Path('.env')
+load_dotenv(dotenv_path=dotenv_path)
 tasks = [FaceEffects(), FaceWarping(), MotionTracking(), CombinedTask()]
 task_manager = TaskManager(tasks)
 
+print (os.getenv("FRAMES_DELAY", 1))
 cam = cv.VideoCapture(0)
 
 while cam.isOpened():
