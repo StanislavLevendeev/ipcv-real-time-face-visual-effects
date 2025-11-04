@@ -2,6 +2,7 @@ import cv2 as cv
 import os
 from utils.overlay_png import overlay_png
 import mediapipe as mp
+import numpy as np
 
 
 class FaceEffects:
