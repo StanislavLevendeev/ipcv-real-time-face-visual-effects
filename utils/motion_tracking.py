@@ -7,8 +7,8 @@ import threading
 import os
 import time
 
-# A global variable to store last result safely
 last_gesture_result = None
+
 lock = threading.Lock()
 frame_counter = 0
 gesture_interval = int(os.getenv("FRAMES_DELAY", "1"))
