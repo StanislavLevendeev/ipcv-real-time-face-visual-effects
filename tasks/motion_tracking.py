@@ -55,7 +55,6 @@ class MotionTracking:
         return frame_copy
 
     def display_light_bulb(self, frame, x, y, w, h):
-        print("You are pointing up and the face is detected")
         # Scale icon relative to face width
         target_w = int(w * 0.5)
         scale = target_w / self.icon_rgba.shape[1]
