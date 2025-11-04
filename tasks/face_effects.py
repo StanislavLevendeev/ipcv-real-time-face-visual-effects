@@ -23,6 +23,13 @@ class FaceEffects:
         self._glasses = None
         self._teeth = None
         self._plaster = None
+        self._asset_downscale = 0.33
+        self._overlay_cache = {
+            "glasses": {"size": None, "rgb": None, "alpha": None},
+            "teeth": {"size": None, "rgb": None, "alpha": None},
+            "plaster": {"size": None, "rgb": None, "alpha": None},
+        }
+        self._overlay_quantization = 4  # Round resize targets to multiples of this for cache hits
         self._load_assets()
         
         # Initialize MediaPipe Face Mesh
@@ -47,21 +54,69 @@ class FaceEffects:
         plaster_path = os.path.join(assets_dir, "plaster.png")
         
         if os.path.exists(glasses_path):
-            self._glasses = cv.imread(glasses_path, cv.IMREAD_UNCHANGED)
+            self._glasses = self._downscale_asset(cv.imread(glasses_path, cv.IMREAD_UNCHANGED))
         
         if os.path.exists(teeth_path):
-            self._teeth = cv.imread(teeth_path, cv.IMREAD_UNCHANGED)
+            self._teeth = self._downscale_asset(cv.imread(teeth_path, cv.IMREAD_UNCHANGED))
         
         if os.path.exists(plaster_path):
-            self._plaster = cv.imread(plaster_path, cv.IMREAD_UNCHANGED)
+            self._plaster = self._downscale_asset(cv.imread(plaster_path, cv.IMREAD_UNCHANGED))
+
+    def _downscale_asset(self, asset):
+        """Downscale asset to reduce per-frame resize cost."""
+        if asset is None:
+            return None
+        if asset.shape[0] == 0 or asset.shape[1] == 0:
+            return asset
+        scale = self._asset_downscale
+        if scale >= 1.0:
+            return asset
+        new_w = max(1, int(asset.shape[1] * scale))
+        new_h = max(1, int(asset.shape[0] * scale))
+        if new_w == asset.shape[1] and new_h == asset.shape[0]:
+            return asset
+        return cv.resize(asset, (new_w, new_h), interpolation=cv.INTER_AREA)
+
+    def _quantize_size(self, value):
+        """Round size to nearest multiple to improve cache hits."""
+        if value <= 0:
+            return 0
+        step = self._overlay_quantization
+        return max(1, int(round(value / step) * step))
     
-    def _overlay_png(self, frame, overlay, x, y, w, h):
+    def _overlay_png(self, frame, overlay, x, y, w, h, cache_key=None):
         """Overlay a PNG image with alpha channel onto frame"""
         if overlay is None or w <= 0 or h <= 0:
             return frame
         
-        # Resize overlay to fit the target area
-        overlay_resized = cv.resize(overlay, (w, h), interpolation=cv.INTER_AREA)
+        # Prefer cached resize if we have one for this size
+        cached_rgb = cached_alpha = None
+        if cache_key and cache_key in self._overlay_cache:
+            cache_entry = self._overlay_cache[cache_key]
+            if cache_entry["size"] == (w, h):
+                cached_rgb = cache_entry["rgb"]
+                cached_alpha = cache_entry["alpha"]
+        
+        if cached_rgb is None or cached_alpha is None:
+            base_h, base_w = overlay.shape[:2]
+            if w < base_w or h < base_h:
+                interp = cv.INTER_AREA
+            else:
+                interp = cv.INTER_LINEAR
+            overlay_resized = cv.resize(overlay, (w, h), interpolation=interp)
+            if overlay_resized.shape[2] == 4:
+                alpha = overlay_resized[:, :, 3:4].astype(np.float32) / 255.0
+                overlay_rgb = overlay_resized[:, :, :3].astype(np.float32)
+            else:
+                alpha = np.ones((h, w, 1), dtype=np.float32)
+                overlay_rgb = overlay_resized[:, :, :3].astype(np.float32)
+            if cache_key and cache_key in self._overlay_cache:
+                self._overlay_cache[cache_key]["size"] = (w, h)
+                self._overlay_cache[cache_key]["alpha"] = alpha
+                self._overlay_cache[cache_key]["rgb"] = overlay_rgb
+        else:
+            alpha = cached_alpha
+            overlay_rgb = cached_rgb
         
         frame_h, frame_w = frame.shape[:2]
         # Clip overlay to stay inside the frame instead of discarding it completely
@@ -76,76 +131,18 @@ class FaceEffects:
         overlay_y1 = y1 - y
         overlay_x2 = overlay_x1 + (x2 - x1)
         overlay_y2 = overlay_y1 + (y2 - y1)
-        overlay_region = overlay_resized[overlay_y1:overlay_y2, overlay_x1:overlay_x2]
+        overlay_region = overlay_rgb[overlay_y1:overlay_y2, overlay_x1:overlay_x2]
+        alpha_region = alpha[overlay_y1:overlay_y2, overlay_x1:overlay_x2]
         
         # Extract alpha channel if it exists
-        if overlay_region.shape[2] == 4:
-            alpha = overlay_region[:, :, 3:4] / 255.0
-            overlay_rgb = overlay_region[:, :, :3]
-        else:
-            alpha = np.ones((overlay_region.shape[0], overlay_region.shape[1], 1), dtype=np.float32)
-            overlay_rgb = overlay_region
-        
         # Blend the overlay with the frame using proper alpha compositing
         roi = frame[y1:y2, x1:x2].astype(np.float32)
-        overlay_rgb = overlay_rgb.astype(np.float32)
-        blended = alpha * overlay_rgb + (1.0 - alpha) * roi
+        blended = alpha_region * overlay_region + (1.0 - alpha_region) * roi
         frame[y1:y2, x1:x2] = np.clip(blended, 0, 255).astype(np.uint8)
         
         return frame
     
-    def _apply_round_face_warp(self, frame, points, strength=0.13):
-        h, w = frame.shape[:2]
-        # Use jawline (0-16) and outer cheeks (234, 454) in proper order for closed contour
-        jaw_indices = list(range(0, 17))
-        left_cheek = 234
-        right_cheek = 454
-        contour_indices = jaw_indices + [right_cheek] + [left_cheek]
-        contour_pts = points[contour_indices]
-        center = np.mean(contour_pts, axis=0).astype(np.int32)
-        
-        # Create mask for the face contour
-        mask = np.zeros((h, w), dtype=np.uint8)
-        cv.fillConvexPoly(mask, contour_pts.astype(np.int32), 255)
-        
-        # Get bounding rect for efficiency
-        x, y, bw, bh = cv.boundingRect(contour_pts.astype(np.int32))
-        x = max(0, x - 40)
-        y = max(0, y - 40)
-        bw = min(w - x, bw + 80)
-        bh = min(h - y, bh + 80)
-        
-        # Create coordinate grids in ROI space (0 to bw/bh)
-        map_x = np.arange(bw, dtype=np.float32)[np.newaxis, :].repeat(bh, axis=0)
-        map_y = np.arange(bh, dtype=np.float32)[:, np.newaxis].repeat(bw, axis=1)
-        
-        # Get ROI
-        roi = frame[y:y+bh, x:x+bw]
-        
-        # Only morph pixels near the contour
-        for pt in contour_pts:
-            dx = (pt[0] - center[0]) * strength
-            dy = (pt[1] - center[1]) * strength
-            # Calculate distance in frame coordinates
-            pt_x_frame = pt[0]
-            pt_y_frame = pt[1]
-            # Convert map coordinates to frame coordinates for distance calculation
-            map_x_frame = map_x + x
-            map_y_frame = map_y + y
-            dist_sq = (map_x_frame - pt_x_frame) ** 2 + (map_y_frame - pt_y_frame) ** 2
-            influence = np.exp(-dist_sq / (2 * (bw * 0.18) ** 2))
-            map_x += dx * influence
-            map_y += dy * influence
-        
-        # Apply the warp
-        warped = cv.remap(roi, map_x, map_y, cv.INTER_LINEAR, borderMode=cv.BORDER_REPLICATE)
-        
-        # Blend using mask for smooth edges
-        mask_roi = mask[y:y+bh, x:x+bw]
-        mask_blur = cv.GaussianBlur(mask_roi, (51, 51), 0) / 255.0
-        frame[y:y+bh, x:x+bw] = (warped * mask_blur[..., None] + roi * (1 - mask_blur[..., None])).astype(np.uint8)
-        
-        return frame
+
 
     def process_frame(self, frame):
         """Process frame with MediaPipe face mesh for precise landmark detection"""
@@ -194,7 +191,7 @@ class FaceEffects:
         frame = self._apply_glasses(frame, left_eye_center, right_eye_center, nose_bridge, eye_distance)
         
         # Add plaster on glasses bridge
-        frame = self._apply_plaster(frame, nose_bridge, eye_distance)
+       # frame = self._apply_plaster(frame, nose_bridge, eye_distance)
         
         # Apply teeth (at mouth position)
         frame = self._apply_teeth(frame, mouth_top, face_width)
@@ -255,35 +252,35 @@ class FaceEffects:
         if self._plaster is None:
             return frame
         
-        plaster_w = int(eye_distance * 0.6)
-        plaster_h = int(eye_distance * 0.6)
+        plaster_w = self._quantize_size(int(eye_distance * 0.6))
+        plaster_h = self._quantize_size(int(eye_distance * 0.6))
         # Position on left glasses lens/frame (not center nose)
         plaster_x = nose_bridge[0] - int(eye_distance * 0.6) - plaster_w // 2
         plaster_y = nose_bridge[1] - plaster_h // 2
         
-        return self._overlay_png(frame, self._plaster, plaster_x, plaster_y, plaster_w, plaster_h)
+        return self._overlay_png(frame, self._plaster, plaster_x, plaster_y, plaster_w, plaster_h, cache_key="plaster")
     
     def _apply_glasses(self, frame, left_eye_center, right_eye_center, nose_bridge, eye_distance):
         """Apply glasses aligned with eyes"""
         # Calculate glasses dimensions based on eye distance
-        glasses_w = int(eye_distance * 2.4)
-        glasses_h = int(eye_distance * 0.9)
+        glasses_w = self._quantize_size(int(eye_distance * 2.4))
+        glasses_h = self._quantize_size(int(eye_distance * 0.9))
         
         # Position glasses centered between eyes, slightly above
         eyes_center = ((left_eye_center + right_eye_center) / 2).astype(int)
         glasses_x = eyes_center[0] - glasses_w // 2
         glasses_y = eyes_center[1] - int(glasses_h * 0.45)
         
-        return self._overlay_png(frame, self._glasses, glasses_x, glasses_y, glasses_w, glasses_h)
+        return self._overlay_png(frame, self._glasses, glasses_x, glasses_y, glasses_w, glasses_h, cache_key="glasses")
     
     def _apply_teeth(self, frame, mouth_top, face_width):
         """Apply bunny teeth at mouth position"""
-        teeth_w = int(face_width * 0.3)
-        teeth_h = int(face_width * 0.2)
+        teeth_w = self._quantize_size(int(face_width * 0.3))
+        teeth_h = self._quantize_size(int(face_width * 0.2))
         teeth_x = mouth_top[0] - teeth_w // 2
         teeth_y = mouth_top[1] - int(teeth_h * 0.2)  # Position higher so top edge is at mouth
         
-        return self._overlay_png(frame, self._teeth, teeth_x, teeth_y, teeth_w, teeth_h)
+        return self._overlay_png(frame, self._teeth, teeth_x, teeth_y, teeth_w, teeth_h, cache_key="teeth")
 
     def display_label(self, frame):
         cv.putText(
