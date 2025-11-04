@@ -135,9 +135,10 @@ class FaceEffects:
                 self._cached_landmarks = self._smoothed_landmarks.copy()
                 points_float = self._cached_landmarks
             else:
-                if self._cached_landmarks is None:
-                    return frame
-                self._frame_counter = self._mesh_every_n_frames
+                # No face detected - reset cached landmarks to remove effects
+                self._cached_landmarks = None
+                self._smoothed_landmarks = None
+                return frame
 
         if points_float is None:
             if self._cached_landmarks is None:
