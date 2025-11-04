@@ -107,12 +107,12 @@ class FaceWarping:
         # Calculate face width for proportional scaling
         face_width = np.max(jaw_pts[:, 0]) - np.min(jaw_pts[:, 0])
 
-        if self.debug_mode:
+        if os.environ.get("DEBUG", "0") == "1":
             frame = self._draw_debug_info(frame, jaw_pts, lower_jaw_pts, chin_pt)
-        else:
-            frame = self._apply_jaw_warp(frame, lower_jaw_pts, chin_pt, face_width)
-            frame = self._add_beard_effect(frame, jaw_pts, lower_jaw_pts, chin_pt, face_width)
-            frame = self._apply_eyebrow_frown(frame, left_brow, right_brow, face_width)
+        
+        frame = self._apply_jaw_warp(frame, lower_jaw_pts, chin_pt, face_width)
+        frame = self._add_beard_effect(frame, jaw_pts, lower_jaw_pts, chin_pt, face_width)
+        frame = self._apply_eyebrow_frown(frame, left_brow, right_brow, face_width)
 
         return self._apply_flash_effect(frame)
 
@@ -386,12 +386,12 @@ class FaceWarping:
         """Display current mode label on frame."""
         
         # Determine label text based on mode
-        mode = "DEBUG MODE" if self.debug_mode else "WARP MODE"
+        mode = "DEBUG MODE" if os.environ.get("DEBUG", "0") == "1" else "WARP MODE"
         cv.putText(frame, f"Chad Jaw Filter - {mode}", (10, 30),
                 cv.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv.LINE_AA)
         
         # In debug mode, add a legend explaining color coding
-        if self.debug_mode:
+        if os.environ.get("DEBUG", "0") == "1":
             cv.putText(frame, "Blue: Original | Red: Target | Yellow: Vectors", (10, 60),
                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
         
