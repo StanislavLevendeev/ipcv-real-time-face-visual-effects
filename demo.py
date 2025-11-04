@@ -2,10 +2,11 @@ import cv2 as cv
 from tasks.face_effects import FaceEffects
 from tasks.face_warping import FaceWarping
 from tasks.motion_tracking import MotionTracking
+from tasks.combined_task import CombinedTask
 from tasks.task_manager import TaskManager
 
 
-tasks = [FaceEffects(), FaceWarping(), MotionTracking()]
+tasks = [FaceEffects(), FaceWarping(), MotionTracking(), CombinedTask()]
 task_manager = TaskManager(tasks)
 
 cam = cv.VideoCapture(0)
