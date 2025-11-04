@@ -168,8 +168,37 @@ class FaceEffects:
         frame = self._apply_plaster(frame, nose_bridge, eye_distance)
         frame = self._apply_teeth(frame, mouth_top, face_width)
 
+        self.display_debug_info(frame)
+
         return frame
 
+    def display_debug_info(self, frame):
+        h, w, _ = frame.shape
+        if os.environ.get("DEBUG", "0") == "1":
+            result = self.last_detected_faces
+            if result and getattr(result, "multi_face_landmarks", None):
+                for face_landmarks in result.multi_face_landmarks:
+                    xs = [lm.x for lm in face_landmarks.landmark]
+                    ys = [lm.y for lm in face_landmarks.landmark]
+
+                    x_min = int(max(0, min(xs) * w))
+                    x_max = int(min(w, max(xs) * w))
+                    y_min = int(max(0, min(ys) * h))
+                    y_max = int(min(h, max(ys) * h))
+
+                    w_box = x_max - x_min
+                    h_box = y_max - y_min
+                    if w_box <= 0 or h_box <= 0:
+                        continue
+
+                    # draw ellipse and center marker plus label
+                    center = (x_min + w_box // 2, y_min + h_box // 2)
+                    frame = cv.ellipse(
+                        frame, center, (w_box // 2, h_box // 2), 0, 0, 360, (255, 0, 255), 2
+                    )
+                    cv.circle(frame, center, 4, (0, 255, 0), -1)
+        return frame
+    
     def _apply_freckles(self, frame, left_cheek_points, right_cheek_points, nose_sides):
         """Apply freckles based on precise cheek landmarks with natural randomness."""
         freckle_color = (40, 100, 150)
